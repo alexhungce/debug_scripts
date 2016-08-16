@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s -o nounset
 
-sudo apt-get install miredo tor pastebinit openssh-server
+sudo apt-get install -y miredo tor pastebinit openssh-server
 sudo systemctl restart miredo
 
 cat << EOF >> ~/.ssh/config
