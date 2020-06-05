@@ -33,13 +33,18 @@ if [ $EUID -ne 0 ]; then
 	exit 1
 fi
 
+if [ -f $OUTPUT_FILE ]; then
+	echo "`basename $OUTPUT_FILE`: file already exists"
+	exit 2
+fi
+
 if ! [ -z "$1" ]; then
 	ACPI_DIR=$1
 fi
 
 if ! [ -f $ACPI_DIR/DSDT ] ; then
 	echo "Not an ACPI table directory"
-	exit 1
+	exit 3
 fi
 
 pushd . &> /dev/null
