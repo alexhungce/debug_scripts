@@ -14,6 +14,20 @@
 ACPI_DIR="/sys/firmware/acpi/tables"
 OUTPUT_FILE="$PWD/acpidump.log"
 
+dump_acpi_tables () {
+
+	cd $1
+	for table in * ; do
+		if [ -f $table ] ; then
+			acpidump -f $table >> $2
+		elif [ -d $table ] ; then
+			pushd . &> /dev/null
+			dump_acpi_tables $table $OUTPUT_FILE
+			popd &> /dev/null
+		fi
+	done
+}
+
 if [ $EUID -ne 0 ]; then
 	echo "`basename $0`: must be executed with sudo"
 	exit 1
@@ -29,27 +43,10 @@ if ! [ -f $ACPI_DIR/DSDT ] ; then
 fi
 
 pushd . &> /dev/null
-
-cd $ACPI_DIR
-for table in * ; do
-	if [ -f $table ] ; then
-		acpidump -f $table >> $OUTPUT_FILE
-		echo "" >> $OUTPUT_FILE
-	fi
-done
-
-[ -d dynamic ] || exit 2
-
-cd dynamic
-for table in * ; do
-	if [ -f $table ] ; then
-		acpidump -f $table >> $OUTPUT_FILE
-		echo "" >> $OUTPUT_FILE
-	fi
-done
+dump_acpi_tables $ACPI_DIR $OUTPUT_FILE
+popd &> /dev/null
 
 # add permissions to non-root
 sudo chmod 666 $OUTPUT_FILE
 
-popd &> /dev/null
 
