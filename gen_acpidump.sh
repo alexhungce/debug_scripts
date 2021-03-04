@@ -14,9 +14,28 @@
 ACPI_DIR="/sys/firmware/acpi/tables"
 OUTPUT_FILE="$PWD/acpidump.log"
 
+dump_acpi_tables () {
+
+	cd $1
+	for table in * ; do
+		if [ -f $table ] ; then
+			acpidump -f $table >> $2
+		elif [ -d $table ] ; then
+			pushd . &> /dev/null
+			dump_acpi_tables $table $OUTPUT_FILE
+			popd &> /dev/null
+		fi
+	done
+}
+
 if [ $EUID -ne 0 ]; then
 	echo "`basename $0`: must be executed with sudo"
 	exit 1
+fi
+
+if [ -f $OUTPUT_FILE ]; then
+	echo "`basename $OUTPUT_FILE`: file already exists"
+	exit 2
 fi
 
 if ! [ -z "$1" ]; then
@@ -25,33 +44,14 @@ fi
 
 if ! [ -f $ACPI_DIR/DSDT ] ; then
 	echo "Not an ACPI table directory"
-	exit 1
+	exit 3
 fi
 
 pushd . &> /dev/null
-
-cd $ACPI_DIR
-for table in * ; do
-	if [ -f $table ] ; then
-		echo ${table:0:4} @ 0x0000000000000000 >> $OUTPUT_FILE
-		xxd -u -c 16 -g 1 $table | sed 's/^0000/    /'  >> $OUTPUT_FILE
-		echo "" >> $OUTPUT_FILE
-	fi
-done
-
-[ -d dynamic ] || exit 2
-
-cd dynamic
-for table in * ; do
-	if [ -f $table ] ; then
-		echo ${table:0:4} @ 0x0000000000000000 >> $OUTPUT_FILE
-		xxd -u -c 16 -g 1 $table | sed 's/^0000/    /'  >> $OUTPUT_FILE
-		echo "" >> $OUTPUT_FILE
-	fi
-done
+dump_acpi_tables $ACPI_DIR $OUTPUT_FILE
+popd &> /dev/null
 
 # add permissions to non-root
 sudo chmod 666 $OUTPUT_FILE
 
-popd &> /dev/null
 
